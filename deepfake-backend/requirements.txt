@@ -17,3 +17,5 @@ numpy==1.26.4
 transformers>=4.38.0
 # Inference
 onnxruntime==1.17.1
+# Face Clustering (dFace)
+scikit-learn>=1.4.0

@@ -9,6 +9,7 @@ import mimetypes
 from inference.visual_model import VisualArtifactDetector
 from inference.audio_model import AudioArtifactDetector
 from inference.c2pa_validator import C2PAValidator
+from inference.face_analysis import FaceAnalyzer
 
 app = FastAPI(
     title="Deepfake Detection API",
@@ -30,6 +31,7 @@ print("🚀 Initializing deepfake detection models...")
 visual_detector = VisualArtifactDetector()
 audio_detector = AudioArtifactDetector()
 c2pa_validator = C2PAValidator()
+face_analyzer = FaceAnalyzer()
 print("🟢 All models ready!")
 
 
@@ -38,6 +40,8 @@ class AnalysisResult(BaseModel):
     c2pa_valid: bool
     visual_artifacts_detected: bool
     audio_artifacts_detected: bool
+    face_detected: bool
+    faces_count: int
     verdict: str
     details: dict
 
@@ -87,7 +91,14 @@ async def upload_media(file: UploadFile = File(...)):
     if is_video or is_audio:
         audio_result = audio_detector.analyze_audio(file_path)
 
-    # 4. Aggregate Authenticity Score
+    # 4. Face Detection & Identity Clustering (dFace)
+    face_result = {"faces_detected": 0, "unique_identities": 0}
+    if is_video:
+        face_result = face_analyzer.analyze_video(file_path)
+    elif is_image:
+        face_result = face_analyzer.analyze_image(file_path)
+
+    # 5. Aggregate Authenticity Score
     # Weight visual more heavily for images, balance for video
     if is_video:
         visual_weight = 0.55
@@ -126,6 +137,7 @@ async def upload_media(file: UploadFile = File(...)):
         "c2pa_manifest": c2pa_result,
         "visual_analysis": visual_result,
         "audio_analysis": audio_result,
+        "face_analysis": face_result,
         "weights": {"visual": visual_weight, "audio": audio_weight},
         "media_type": "video" if is_video else ("audio" if is_audio else "image"),
     }
@@ -141,6 +153,8 @@ async def upload_media(file: UploadFile = File(...)):
         c2pa_valid=bool(c2pa_result.get("c2pa_valid_signature", False)),
         visual_artifacts_detected=bool(visual_result.get("visual_artifacts_detected", False)),
         audio_artifacts_detected=bool(audio_result.get("audio_artifacts_detected", False)),
+        face_detected=bool(face_result.get("faces_detected", 0) > 0),
+        faces_count=int(face_result.get("faces_detected", 0)),
         verdict=verdict,
         details=details,
     )

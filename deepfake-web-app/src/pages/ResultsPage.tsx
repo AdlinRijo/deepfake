@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { ShieldCheck, ShieldAlert, Cpu, Fingerprint, RefreshCcw, Clock, Brain, AudioLines } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Cpu, Fingerprint, RefreshCcw, Clock, Brain, AudioLines, Users, ScanFace } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -17,7 +17,7 @@ export default function ResultsPage() {
         return <Navigate to="/" replace />;
     }
 
-    const { authenticity_score, c2pa_valid, visual_artifacts_detected, audio_artifacts_detected, verdict, details, analysis_time_ms } = location.state;
+    const { authenticity_score, c2pa_valid, visual_artifacts_detected, audio_artifacts_detected, face_detected, faces_count, verdict, details, analysis_time_ms } = location.state;
 
     const isAuthentic = authenticity_score > 80;
     const isSuspicious = authenticity_score > 50 && authenticity_score <= 80;
@@ -33,6 +33,13 @@ export default function ResultsPage() {
     const visualConfidence = details?.visual_analysis?.confidence;
     const audioConfidence = details?.audio_analysis?.confidence;
     const mediaType = details?.media_type || 'unknown';
+
+    // Face analysis data
+    const faceAnalysis = details?.face_analysis;
+    const facesDetected = faceAnalysis?.faces_detected || 0;
+    const uniqueIdentities = faceAnalysis?.unique_identities || 0;
+    const faceClusters = faceAnalysis?.clusters || {};
+    const faceThumbnails = faceAnalysis?.thumbnails || [];
 
     return (
         <div className="flex flex-col items-center justify-start min-h-[80vh] px-4 py-8 animate-fade-in max-w-5xl mx-auto space-y-10">
@@ -162,6 +169,70 @@ export default function ResultsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Face Analysis Section */}
+            {(facesDetected > 0 || face_detected) && (
+                <div className="w-full max-w-3xl glass-card p-6 rounded-2xl flex flex-col gap-4 border border-white/5">
+                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                        <ScanFace className="text-purple-400" />
+                        <h3 className="text-lg font-semibold text-white">Face Analysis</h3>
+                        <span className="ml-auto text-xs text-white/40">{faceAnalysis?.model || 'dFace (MTCNN + FaceNet)'}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="flex flex-col items-center gap-1 bg-white/5 rounded-xl p-4">
+                            <ScanFace className="text-blue-400" size={28} />
+                            <span className="text-2xl font-bold text-white">{facesDetected}</span>
+                            <span className="text-xs text-white/50">Faces Detected</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1 bg-white/5 rounded-xl p-4">
+                            <Users className="text-purple-400" size={28} />
+                            <span className="text-2xl font-bold text-white">{uniqueIdentities}</span>
+                            <span className="text-xs text-white/50">Unique Identities</span>
+                        </div>
+                    </div>
+
+                    {/* Identity Cluster Thumbnails */}
+                    {Object.keys(faceClusters).length > 0 && (
+                        <div className="pt-4 space-y-3">
+                            <h4 className="text-sm font-medium text-white/60">Identity Clusters</h4>
+                            <div className="flex flex-wrap gap-3">
+                                {Object.entries(faceClusters).map(([key, cluster]: [string, any]) => (
+                                    <div key={key} className="flex flex-col items-center gap-1.5 bg-white/5 rounded-xl p-3 border border-white/10">
+                                        {cluster.sample_thumbnail && (
+                                            <img
+                                                src={`data:image/jpeg;base64,${cluster.sample_thumbnail}`}
+                                                alt={key}
+                                                className="w-16 h-16 rounded-lg object-cover ring-2 ring-purple-500/30"
+                                            />
+                                        )}
+                                        <span className="text-xs text-white/70 font-medium">{key.replace('_', ' ')}</span>
+                                        <span className="text-[10px] text-white/40">{cluster.count} appearances</span>
+                                        <span className="text-[10px] text-white/40">Conf: {(cluster.avg_confidence * 100).toFixed(1)}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Image face thumbnails (no clusters) */}
+                    {faceThumbnails.length > 0 && Object.keys(faceClusters).length === 0 && (
+                        <div className="pt-4 space-y-3">
+                            <h4 className="text-sm font-medium text-white/60">Detected Faces</h4>
+                            <div className="flex flex-wrap gap-3">
+                                {faceThumbnails.map((thumb: string, idx: number) => (
+                                    <img
+                                        key={idx}
+                                        src={`data:image/jpeg;base64,${thumb}`}
+                                        alt={`face-${idx}`}
+                                        className="w-16 h-16 rounded-lg object-cover ring-2 ring-blue-500/30"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <button
                 onClick={() => navigate('/')}
