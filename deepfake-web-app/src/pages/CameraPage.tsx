@@ -1,48 +1,99 @@
 import React, { useRef, useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import { Camera as CameraIcon, CheckCircle2, Circle, ShieldAlert } from 'lucide-react';
+import { Camera as CameraIcon, Circle, ShieldAlert, AlertCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8000';
 
 export default function CameraPage() {
     const webcamRef = useRef<Webcam>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [livenessStatus, setLivenessStatus] = useState<string>("Scanning WebGL Context...");
+    const [livenessStatus, setLivenessStatus] = useState<string>("Ready to capture");
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [error, setError] = useState<string | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const navigate = useNavigate();
 
-    const handleCapture = useCallback(() => {
+    const startTimer = () => {
+        setElapsedTime(0);
+        timerRef.current = setInterval(() => {
+            setElapsedTime(prev => prev + 100);
+        }, 100);
+    };
+
+    const stopTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const formatTime = (ms: number) => {
+        return `${(ms / 1000).toFixed(1)}s`;
+    };
+
+    const handleCapture = useCallback(async () => {
         if (webcamRef.current) {
             setIsProcessing(true);
-            setLivenessStatus("Evaluating In-Browser Liveness...");
+            setError(null);
+            setLivenessStatus("Capturing frame...");
 
             const imageSrc = webcamRef.current.getScreenshot();
 
             if (imageSrc) {
-                // Mock C2PA Browser Signing and API Upload
-                setTimeout(() => {
-                    setLivenessStatus("Assembling C2PA Manifest...");
+                try {
+                    setLivenessStatus("Sending to AI models...");
+                    startTimer();
+
+                    // Convert base64 screenshot to a File blob
+                    const response = await fetch(imageSrc);
+                    const blob = await response.blob();
+                    const file = new File([blob], 'live_capture.jpg', { type: 'image/jpeg' });
+
+                    // Send to real backend API
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    setLivenessStatus("Running EfficientNet-B0 analysis...");
+
+                    const result = await axios.post(`${API_URL}/upload`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                    });
+
+                    stopTimer();
+                    setLivenessStatus("Analysis complete!");
+
+                    // Navigate to results with REAL AI data
                     setTimeout(() => {
                         navigate('/results', {
                             state: {
-                                authenticity_score: 98.4,
-                                c2pa_valid: true,
-                                visual_artifacts_detected: false,
-                                audio_artifacts_detected: false,
-                                details: { info: "Signed via Browser WASM Module." }
+                                ...result.data,
+                                analysis_time_ms: elapsedTime,
+                                source: 'live_capture',
                             }
                         });
-                    }, 1500);
-                }, 1500);
+                    }, 500);
+
+                } catch (err: any) {
+                    stopTimer();
+                    setIsProcessing(false);
+                    setLivenessStatus("Ready to capture");
+                    const message = err.response?.data?.detail || err.message || 'Failed to analyze capture. Is the backend running?';
+                    setError(message);
+                    console.error('Capture analysis error:', err);
+                }
             }
         }
-    }, [webcamRef, navigate]);
+    }, [webcamRef, navigate, elapsedTime]);
 
     return (
         <div className="flex flex-col items-center min-h-[80vh] justify-center px-4 max-w-4xl mx-auto space-y-8 animate-fade-in">
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-emerald-300">
-                    Live Capture Context
+                    Live Capture & AI Analysis
                 </h1>
-                <p className="text-white/60">Passive liveness checks running natively in your browser.</p>
+                <p className="text-white/60">Capture a photo and run real AI deepfake detection instantly.</p>
             </div>
 
             <div className="relative w-full max-w-2xl aspect-video rounded-2xl overflow-hidden glass-card shadow-2xl ring-1 ring-white/10 group">
@@ -60,7 +111,7 @@ export default function CameraPage() {
                         <div className="flex items-center gap-2 bg-black/40 backdrop-blur px-3 py-1.5 rounded-full border border-white/10">
                             <ShieldAlert size={14} className="text-accent" />
                             <span className="text-xs font-medium text-accent truncate max-w-[150px]">
-                                Liveness: Active
+                                AI Detection: Active
                             </span>
                         </div>
 
@@ -80,10 +131,29 @@ export default function CameraPage() {
                 </div>
             </div>
 
+            {/* Timer display when processing */}
+            {isProcessing && (
+                <div className="flex items-center gap-2 text-white/50 text-sm">
+                    <Clock size={14} />
+                    <span>Elapsed: <span className="text-white font-mono font-medium">{formatTime(elapsedTime)}</span></span>
+                </div>
+            )}
+
+            {/* Error display */}
+            {error && (
+                <div className="w-full max-w-md glass-card rounded-xl p-4 border border-red-500/30 bg-red-500/10 flex items-start gap-3 text-left">
+                    <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                        <h4 className="font-semibold text-red-400">Analysis Failed</h4>
+                        <p className="text-sm text-white/60 mt-1">{error}</p>
+                    </div>
+                </div>
+            )}
+
             <div className="w-full max-w-md bg-surface/50 border border-white/5 rounded-2xl p-6 flex items-center justify-between glass-card">
                 <div className="flex flex-col">
                     <span className="text-white font-medium text-lg">Align Face & Capture</span>
-                    <span className="text-white/40 text-sm">Hardware signature ready</span>
+                    <span className="text-white/40 text-sm">Real AI analysis on capture</span>
                 </div>
 
                 <button

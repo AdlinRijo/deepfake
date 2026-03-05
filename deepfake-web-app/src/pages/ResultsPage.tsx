@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { ShieldCheck, ShieldAlert, Cpu, Fingerprint, RefreshCcw } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Cpu, Fingerprint, RefreshCcw, Clock, Brain, AudioLines } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -17,7 +17,7 @@ export default function ResultsPage() {
         return <Navigate to="/" replace />;
     }
 
-    const { authenticity_score, c2pa_valid, visual_artifacts_detected, audio_artifacts_detected, details } = location.state;
+    const { authenticity_score, c2pa_valid, visual_artifacts_detected, audio_artifacts_detected, verdict, details, analysis_time_ms } = location.state;
 
     const isAuthentic = authenticity_score > 80;
     const isSuspicious = authenticity_score > 50 && authenticity_score <= 80;
@@ -25,11 +25,20 @@ export default function ResultsPage() {
     const scoreColorClass = isAuthentic ? 'text-accent' : isSuspicious ? 'text-yellow-500' : 'text-danger';
     const scoreBgClass = isAuthentic ? 'bg-accent/10 border-accent/20' : isSuspicious ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-danger/10 border-danger/20';
 
+    // Extract detailed scores from backend response
+    const visualScore = details?.visual_analysis?.visual_artifacts_score;
+    const audioScore = details?.audio_analysis?.audio_artifacts_score;
+    const visualModel = details?.visual_analysis?.model || 'N/A';
+    const audioModel = details?.audio_analysis?.model || 'N/A';
+    const visualConfidence = details?.visual_analysis?.confidence;
+    const audioConfidence = details?.audio_analysis?.confidence;
+    const mediaType = details?.media_type || 'unknown';
+
     return (
         <div className="flex flex-col items-center justify-start min-h-[80vh] px-4 py-8 animate-fade-in max-w-5xl mx-auto space-y-10">
             <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold text-white">Analysis Results</h1>
-                <p className="text-white/60">Comprehensive deepfake intelligence report.</p>
+                <h1 className="text-3xl font-bold text-white">AI Analysis Results</h1>
+                <p className="text-white/60">Real deepfake detection powered by EfficientNet-B0 & Wav2Vec2</p>
             </div>
 
             <div className={cn("w-full max-w-3xl glass-card rounded-3xl p-10 flex flex-col md:flex-row items-center justify-between gap-8 border-2 transition-colors", scoreBgClass)}>
@@ -42,12 +51,21 @@ export default function ResultsPage() {
                         <span className={cn("text-2xl font-bold", scoreColorClass)}>%</span>
                     </div>
 
+                    {/* Verdict from backend AI */}
                     <div className="flex items-center gap-2 mt-4 px-4 py-2 bg-black/40 rounded-full border border-white/10">
                         {isAuthentic ? <ShieldCheck className="text-accent" size={18} /> : <ShieldAlert className="text-danger" size={18} />}
                         <span className="text-sm font-medium text-white/80">
-                            {isAuthentic ? 'Verified Authentic Media' : isSuspicious ? 'Potential Anomalies Detected' : 'Synthetically Generated Media'}
+                            {verdict || (isAuthentic ? 'Verified Authentic Media' : isSuspicious ? 'Potential Anomalies Detected' : 'Synthetically Generated Media')}
                         </span>
                     </div>
+
+                    {/* Analysis time */}
+                    {analysis_time_ms > 0 && (
+                        <div className="flex items-center gap-2 mt-2 text-white/40 text-xs">
+                            <Clock size={12} />
+                            <span>Analyzed in <span className="text-white/60 font-mono">{(analysis_time_ms / 1000).toFixed(1)}s</span></span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Visual Graphic */}
@@ -68,6 +86,7 @@ export default function ResultsPage() {
             </div>
 
             <div className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Trust Provenance */}
                 <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 border border-white/5">
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                         <Fingerprint className="text-primary" />
@@ -75,34 +94,70 @@ export default function ResultsPage() {
                     </div>
                     <div className="space-y-4 pt-2">
                         <div className="flex justify-between items-center">
-                            <span className="text-white/60">C2PA Standard Signature</span>
+                            <span className="text-white/60">C2PA Signature</span>
                             <span className={cn("font-medium px-3 py-1 rounded-md text-sm", c2pa_valid ? 'bg-accent/20 text-accent' : 'bg-danger/20 text-danger')}>
                                 {c2pa_valid ? 'Cryptographically Valid' : 'Missing / Invalid'}
                             </span>
                         </div>
-                        {details.info && (
-                            <p className="text-sm text-white/40 italic">"{details.info}"</p>
-                        )}
+                        <div className="flex justify-between items-center">
+                            <span className="text-white/60">Media Type</span>
+                            <span className="font-medium px-3 py-1 rounded-md text-sm bg-white/10 text-white/70 capitalize">
+                                {mediaType}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
+                {/* AI Model Results */}
                 <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 border border-white/5">
                     <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                        <Cpu className="text-secondary" />
-                        <h3 className="text-lg font-semibold text-white">Inference Vectors</h3>
+                        <Brain className="text-secondary" />
+                        <h3 className="text-lg font-semibold text-white">AI Model Inference</h3>
                     </div>
                     <div className="space-y-4 pt-2">
-                        <div className="flex justify-between items-center">
-                            <span className="text-white/60">Visual Artifacts</span>
-                            <span className={cn("font-medium px-3 py-1 rounded-md text-sm", visual_artifacts_detected ? 'bg-danger/20 text-danger' : 'bg-accent/20 text-accent')}>
-                                {visual_artifacts_detected ? 'Detected High Risk' : 'None Detected'}
-                            </span>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-white/60 flex items-center gap-1.5"><Cpu size={14} /> Visual Analysis</span>
+                                <span className={cn("font-medium px-3 py-1 rounded-md text-sm", visual_artifacts_detected ? 'bg-danger/20 text-danger' : 'bg-accent/20 text-accent')}>
+                                    {visual_artifacts_detected ? 'AI Generated / Fake' : 'Natural / Real'}
+                                </span>
+                            </div>
+                            {visualScore !== undefined && (
+                                <div className="ml-4 space-y-1">
+                                    <div className="flex justify-between text-xs text-white/40">
+                                        <span>{visualModel}</span>
+                                        <span>Fake: {(visualScore * 100).toFixed(1)}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn("h-full rounded-full", visual_artifacts_detected ? 'bg-red-500' : 'bg-accent')}
+                                            style={{ width: `${visualScore * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-white/60">Audio Synthesis</span>
-                            <span className={cn("font-medium px-3 py-1 rounded-md text-sm", audio_artifacts_detected ? 'bg-danger/20 text-danger' : 'bg-accent/20 text-accent')}>
-                                {audio_artifacts_detected ? 'Detected Synthesized' : 'Natural Audio Profile'}
-                            </span>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-white/60 flex items-center gap-1.5"><AudioLines size={14} /> Audio Analysis</span>
+                                <span className={cn("font-medium px-3 py-1 rounded-md text-sm", audio_artifacts_detected ? 'bg-danger/20 text-danger' : 'bg-accent/20 text-accent')}>
+                                    {audio_artifacts_detected ? 'Synthesized Audio' : 'Natural Audio'}
+                                </span>
+                            </div>
+                            {audioScore !== undefined && audioScore > 0 && (
+                                <div className="ml-4 space-y-1">
+                                    <div className="flex justify-between text-xs text-white/40">
+                                        <span>{audioModel}</span>
+                                        <span>Fake: {(audioScore * 100).toFixed(1)}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn("h-full rounded-full", audio_artifacts_detected ? 'bg-red-500' : 'bg-accent')}
+                                            style={{ width: `${audioScore * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
