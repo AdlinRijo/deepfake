@@ -1,0 +1,19 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+python-multipart==0.0.9
+pydantic==2.6.4
+# Audio Processing
+librosa==0.10.1
+soundfile==0.12.1
+# Image/Video Processing
+opencv-python-headless==4.9.0.80
+Pillow==10.2.0
+# ML/DL
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1
+numpy==1.26.4
+# HuggingFace Transformers (for Wav2Vec2 audio deepfake model)
+transformers>=4.38.0
+# Inference
+onnxruntime==1.17.1
