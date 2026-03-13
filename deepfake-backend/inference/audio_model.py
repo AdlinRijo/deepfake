@@ -18,11 +18,11 @@ class AudioArtifactDetector:
         self.feature_extractor = None
         self.model = None
         self._load_model()
-        print(f"✅ Audio Deepfake Model loaded on {self.device}")
+        print(f" Audio Deepfake Model loaded on {self.device}")
 
     def _load_model(self):
         """Downloads and loads the Wav2Vec2 audio deepfake detection model."""
-        print("⬇️  Loading Wav2Vec2 audio deepfake model from HuggingFace (first run will download ~360MB)...")
+        print("  Loading Wav2Vec2 audio deepfake model from HuggingFace (first run will download ~360MB)...")
         os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
 
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(
@@ -59,7 +59,7 @@ class AudioArtifactDetector:
             logits = self.model(input_values).logits
             probs = torch.softmax(logits, dim=-1)
 
-        # Check label mapping — models may use different label orders
+        # Check label mapping  models may use different label orders
         label_names = self.model.config.id2label
         fake_idx = None
         for idx, label in label_names.items():
@@ -132,10 +132,11 @@ class AudioArtifactDetector:
             }
 
         except Exception as e:
-            print(f"❌ Error analyzing audio: {e}")
+            print(f" Error analyzing audio: {e}")
             return {
                 "audio_artifacts_score": 0.0,
                 "audio_artifacts_detected": False,
                 "model": "Wav2Vec2 (ASVspoof 2019)",
                 "error": str(e),
             }
+

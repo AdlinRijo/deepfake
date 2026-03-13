@@ -1,18 +1,19 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Camera, Upload, LayoutDashboard } from 'lucide-react';
+import { Camera, Upload, LayoutDashboard, Key } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import UploadPage from './pages/UploadPage';
 import CameraPage from './pages/CameraPage';
 import ResultsPage from './pages/ResultsPage';
+import ApiAccessModal from './components/ApiAccessModal';
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-function Navigation() {
+function Navigation({ onOpenApiModal }: { onOpenApiModal: () => void }) {
     const location = useLocation();
 
     const navItems = [
@@ -52,6 +53,13 @@ function Navigation() {
                             </Link>
                         );
                     })}
+                    <button
+                        onClick={onOpenApiModal}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 text-accent hover:bg-accent/10 border border-accent/20 hover:border-accent/40 ml-2"
+                    >
+                        <Key size={16} />
+                        <span className="hidden sm:inline">API Access</span>
+                    </button>
                 </div>
             </div>
         </nav>
@@ -59,10 +67,12 @@ function Navigation() {
 }
 
 function App() {
+    const [isApiModalOpen, setIsApiModalOpen] = React.useState(false);
+
     return (
         <BrowserRouter>
             <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-surface via-background to-background pt-24 pb-12">
-                <Navigation />
+                <Navigation onOpenApiModal={() => setIsApiModalOpen(true)} />
                 <main className="container mx-auto px-4 animate-fade-in">
                     <Routes>
                         <Route path="/" element={<UploadPage />} />
@@ -70,6 +80,11 @@ function App() {
                         <Route path="/results" element={<ResultsPage />} />
                     </Routes>
                 </main>
+                
+                <ApiAccessModal 
+                    isOpen={isApiModalOpen} 
+                    onClose={() => setIsApiModalOpen(false)} 
+                />
             </div>
         </BrowserRouter>
     );

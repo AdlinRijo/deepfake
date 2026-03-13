@@ -26,7 +26,7 @@ class C2PAValidator:
     C2PA_MANIFEST_URN = b'c2pa'
 
     def __init__(self):
-        print("✅ C2PA Validator initialized (binary parser)")
+        print(" C2PA Validator initialized (binary parser)")
 
     def validate_manifest(self, filepath: str) -> dict:
         """
@@ -48,7 +48,7 @@ class C2PAValidator:
                 return self._generic_c2pa_scan(filepath)
 
         except Exception as e:
-            print(f"❌ C2PA validation error: {e}")
+            print(f" C2PA validation error: {e}")
             return {
                 "c2pa_present": False,
                 "c2pa_valid_signature": False,
@@ -83,7 +83,7 @@ class C2PAValidator:
             if marker == b'\xff\xd9':  # EOI
                 break
 
-            if marker == b'\xff\xda':  # SOS — start of scan, stop parsing markers
+            if marker == b'\xff\xda':  # SOS  start of scan, stop parsing markers
                 break
 
             # Read segment length (2 bytes, big-endian, includes the length field itself)
@@ -92,7 +92,7 @@ class C2PAValidator:
             seg_len = struct.unpack('>H', data[pos:pos + 2])[0]
             seg_data = data[pos + 2:pos + seg_len]
 
-            # Check if this is APP11 (0xFFEB) — where JUMBF/C2PA lives
+            # Check if this is APP11 (0xFFEB)  where JUMBF/C2PA lives
             if marker == self.JPEG_APP11_MARKER:
                 # Check for JUMBF Content Identifier (JP2C / C2PA markers)
                 if self._contains_c2pa_jumbf(seg_data):
@@ -250,3 +250,4 @@ class C2PAValidator:
             "issuer": None,
             "reason": reason,
         }
+

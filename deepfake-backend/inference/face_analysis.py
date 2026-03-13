@@ -1,5 +1,5 @@
 """
-Face Analysis Module — dFace Integration
+Face Analysis Module  dFace Integration
 =========================================
 Uses MTCNN for face detection and FaceNet for face embeddings.
 Clusters detected faces using DBSCAN to identify unique individuals.
@@ -31,18 +31,18 @@ class FaceAnalyzer:
         import torch
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        print("🔵 Loading MTCNN face detection model...")
+        print(" Loading MTCNN face detection model...")
         self.mtcnn = MTCNN(self.device, MTCNN_MODEL_PATH)
-        print("🔵 Loading FaceNet embedding model...")
+        print(" Loading FaceNet embedding model...")
         self.facenet = FaceNet(self.device, FACENET_MODEL_PATH)
-        print(f"✅ Face analysis models loaded on {self.device}")
+        print(f" Face analysis models loaded on {self.device}")
 
     # ------------------------------------------------------------------
     # Video Analysis (replicates the dface example.py pipeline)
     # ------------------------------------------------------------------
     def analyze_video(self, video_path: str) -> dict:
         """
-        Full pipeline: extract frames → detect faces → embed → cluster.
+        Full pipeline: extract frames  detect faces  embed  cluster.
         Returns structured results with face counts, identity clusters, and
         base64-encoded thumbnail samples.
         """
@@ -108,7 +108,7 @@ class FaceAnalyzer:
                         clusters[key]["avg_confidence"] / clusters[key]["count"], 4
                     )
             else:
-                # Too few faces for DBSCAN — treat all as one identity
+                # Too few faces for DBSCAN  treat all as one identity
                 unique_identities = 1
                 clusters["identity_0"] = {
                     "count": len(faces),
@@ -127,7 +127,7 @@ class FaceAnalyzer:
             }
 
         except Exception as e:
-            print(f"❌ Face analysis error (video): {e}")
+            print(f" Face analysis error (video): {e}")
             return self._empty_result(str(e))
 
     # ------------------------------------------------------------------
@@ -168,8 +168,65 @@ class FaceAnalyzer:
             }
 
         except Exception as e:
-            print(f"❌ Face analysis error (image): {e}")
+            print(f" Face analysis error (image): {e}")
             return self._empty_result(str(e))
+
+    # ------------------------------------------------------------------
+    # Embedding Extraction for Identity Matching
+    # ------------------------------------------------------------------
+    def get_embeddings_from_image(self, image_path: str) -> list:
+        """Extract raw face embeddings from a single image."""
+        try:
+            img = Image.open(image_path).convert("RGB")
+            frame = np.array(img)
+            result = self.mtcnn.detect([frame])
+            if result[0] is None:
+                return []
+
+            boxes, probs, lands = result[0]
+            faces = []
+            for j, box in enumerate(boxes):
+                if probs[j] > 0.90:
+                    h, w = frame.shape[:2]
+                    x1, y1, size = self._get_boundingbox(box, w, h)
+                    face = frame[y1:y1+size, x1:x1+size]
+                    if face.size > 0:
+                        faces.append(face)
+
+            if not faces:
+                return []
+            return self.facenet.embedding(faces).tolist()
+        except Exception as e:
+            print(f" Embedding error (image): {e}")
+            return []
+
+    def get_embeddings_from_video(self, video_path: str) -> list:
+        """Extract all raw face embeddings from a video."""
+        try:
+            frames = self._get_frames(video_path)
+            if not frames:
+                return []
+
+            result = self.mtcnn.detect(frames)
+            faces = []
+            for i, res in enumerate(result):
+                if res is None:
+                    continue
+                boxes, probs, lands = res
+                for j, box in enumerate(boxes):
+                    if probs[j] > 0.98:
+                        h, w = frames[i].shape[:2]
+                        x1, y1, size = self._get_boundingbox(box, w, h)
+                        face = frames[i][y1:y1+size, x1:x1+size]
+                        if face.size > 0:
+                            faces.append(face)
+
+            if not faces:
+                return []
+            return self.facenet.embedding(faces).tolist()
+        except Exception as e:
+            print(f" Embedding error (video): {e}")
+            return []
 
     # ------------------------------------------------------------------
     # Helpers (from the original example.py)
@@ -229,3 +286,4 @@ class FaceAnalyzer:
             "model": "dFace (MTCNN + FaceNet)",
             "error": error_msg,
         }
+

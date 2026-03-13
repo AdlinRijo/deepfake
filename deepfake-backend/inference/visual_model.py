@@ -24,7 +24,7 @@ class VisualArtifactDetector:
     def __init__(self):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self._load_model()
-        print(f"✅ Visual Deepfake Model loaded on {self.device}")
+        print(f" Visual Deepfake Model loaded on {self.device}")
 
     def _load_model(self):
         """Downloads and loads the EfficientNet-B0 deepfake detection model."""
@@ -33,7 +33,7 @@ class VisualArtifactDetector:
 
         # Download if not cached
         if not os.path.exists(model_path):
-            print("⬇️  Downloading EfficientNet-B0 deepfake model from HuggingFace...")
+            print("  Downloading EfficientNet-B0 deepfake model from HuggingFace...")
             state_dict = torch.hub.load_state_dict_from_url(
                 MODEL_URL,
                 model_dir=MODEL_CACHE_DIR,
@@ -41,7 +41,7 @@ class VisualArtifactDetector:
                 file_name="efficientnet_b0_ffpp_c23.pth"
             )
         else:
-            print("📦 Loading cached EfficientNet-B0 deepfake model...")
+            print(" Loading cached EfficientNet-B0 deepfake model...")
             state_dict = torch.load(model_path, map_location=self.device, weights_only=True)
 
         # Rebuild architecture: EfficientNet-B0 with 2-class head (Real / Fake)
@@ -79,7 +79,7 @@ class VisualArtifactDetector:
                 "confidence": round(abs(fake_score - 0.5) * 2, 4),  # 0-1 confidence scale
             }
         except Exception as e:
-            print(f"❌ Error analyzing image: {e}")
+            print(f" Error analyzing image: {e}")
             return {
                 "visual_artifacts_score": 0.0,
                 "visual_artifacts_detected": False,
@@ -111,7 +111,7 @@ class VisualArtifactDetector:
                 if not ret:
                     continue
 
-                # Convert BGR (OpenCV) → RGB (PIL)
+                # Convert BGR (OpenCV)  RGB (PIL)
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 pil_frame = Image.fromarray(rgb_frame)
                 score = self._predict_frame(pil_frame)
@@ -139,10 +139,11 @@ class VisualArtifactDetector:
                 "confidence": round(abs(final_score - 0.5) * 2, 4),
             }
         except Exception as e:
-            print(f"❌ Error analyzing video: {e}")
+            print(f" Error analyzing video: {e}")
             return {
                 "visual_artifacts_score": 0.0,
                 "visual_artifacts_detected": False,
                 "model": "EfficientNet-B0 (FaceForensics++ C23)",
                 "error": str(e),
             }
+
